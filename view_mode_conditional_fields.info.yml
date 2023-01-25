@@ -1,0 +1,8 @@
+name: View Mode Conditional Fields
+type: module
+description: Allows to control the visibility of fields on form display per view mode settings.
+package: Fields
+core: 8.x
+core_version_requirement: ^8 || ^9
+dependencies:
+  - drupal:field

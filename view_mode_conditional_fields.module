@@ -1,0 +1,111 @@
+<?php
+
+/**
+ * @file
+ * Allows to disable field of entities on the forms.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\block_content\Entity\BlockContent;
+use Drupal\block_content\BlockContentForm;
+
+/**
+ * Implements hook_help().
+ */
+function view_mode_conditional_fields_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the view_mode_conditional_fields module.
+    case 'help.page.view_mode_conditional_fields':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('View Mode Conditional module provide settings to administrator to control fields visibility for block entity.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ *
+ * Attach the settings block entity manage field, to control the visibility.
+ */
+function view_mode_conditional_fields_form_field_config_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if (isset($form['#entity']) && $form['#entity'] instanceof BlockContent) {
+    $field = $form_state->getFormObject()->getEntity();
+    $form['third_party_settings']['view_mode_conditional_fields']['field_visibility_display'] = [
+      '#type' => 'textarea',
+      '#title' => t("View Mode Conditional Fields Settings"),
+      '#description' => t("Enter view mode display ids to show fields on form display."),
+      '#default_value' => $field->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display'),
+      '#weight' => -10,
+    ];
+    $form['#validate'][] = 'config_edit_form_validation';
+  }
+}
+
+/**
+ * Attaching settings to control visibility of fields on display.
+ *
+ * @param array $element
+ *   The elements of the form.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   The current form state.
+ * @param array $context
+ *   The context.
+ */
+function view_mode_conditional_fields_field_widget_form_alter(array &$element, FormStateInterface $form_state, array $context) {
+  $applicable_forms = [
+    'layout_builder_add_block',
+    'layout_builder_update_block',
+  ];
+  if ($form_state->getFormObject() instanceof BlockContentForm || in_array($form_state->getFormObject()->getFormId(), $applicable_forms)) {
+    $field_definition = $context['items']->getFieldDefinition();
+    if ($field_definition instanceof FieldConfig) {
+      if ($field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display')) {
+        if (\Drupal::request()->query->get('element_parents')) {
+          return TRUE;
+        }
+
+        $classes = $field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display');
+        if (!empty($classes)) {
+          $classes = "'block_content." . str_replace(","," block_content.", $classes) . " field-visibility-identifier'";
+          $element['#prefix'] = "<div class=" .  $classes . ">";
+          $element['#suffix'] = "</div>";
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function view_mode_conditional_fields_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $applicable_forms = [
+    'layout_builder_add_block',
+    'layout_builder_update_block',
+  ];
+  if ($form_state->getFormObject() instanceof BlockContentForm || in_array($form_id, $applicable_forms)) {
+    $form['#attached']['library'][] = 'view_mode_conditional_fields/view_mode_conditional_fields.integration';
+  }
+}
+
+/**
+ * The configuration edit form validation.
+ *
+ * @param array $form
+ *   The form.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   The current form state.
+ */
+function config_edit_form_validation(array &$form, FormStateInterface $form_state) {
+  $field = $form_state->getFormObject()->getEntity();
+  if (($field->get('required') == 1)) {
+    if (!empty($field->get('third_party_settings')['view_mode_conditional_fields']['field_visibility_display'])) {
+      $form_state->setErrorByName('third_party_settings', t('Required and View Mode Conditional Fields Settings both cant work together.'));
+    }
+  }
+}

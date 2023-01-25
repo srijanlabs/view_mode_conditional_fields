@@ -1,0 +1,7 @@
+view_mode_conditional_fields.integration:
+  version: 2.1
+  js:
+    js/DisableFieldByViewMode.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
