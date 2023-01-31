@@ -34,11 +34,22 @@ function view_mode_conditional_fields_help($route_name, RouteMatchInterface $rou
  */
 function view_mode_conditional_fields_form_field_config_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
   if (isset($form['#entity']) && $form['#entity'] instanceof BlockContent) {
+    $view_modes = \Drupal::entityQuery('entity_view_mode')
+      ->condition('targetEntityType', 'block_content')
+      ->execute();
+    $view_modes['block_content.default'] = 'block_content.default';
+    $options = [];
+    foreach ($view_modes as $view_mode) {
+      $expStr = explode(".", $view_mode);
+      $options[$expStr[1]] = $expStr[1];
+    }
+
     $field = $form_state->getFormObject()->getEntity();
     $form['third_party_settings']['view_mode_conditional_fields']['field_visibility_display'] = [
-      '#type' => 'textarea',
+      '#type' => 'checkboxes',
+      '#options' => $options,
       '#title' => t("View Mode Conditional Fields Settings"),
-      '#description' => t("Enter view mode display ids to show fields on form display."),
+      '#description' => t("Field will be available on selected view mode. If no view mode selected then field will be available on form display's."),
       '#default_value' => $field->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display'),
       '#weight' => -10,
     ];
@@ -69,10 +80,15 @@ function view_mode_conditional_fields_field_widget_form_alter(array &$element, F
           return TRUE;
         }
 
-        $classes = $field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display');
-        if (!empty($classes)) {
-          $classes = "'block_content." . str_replace(","," block_content.", $classes) . " field-visibility-identifier'";
-          $element['#prefix'] = "<div class=" .  $classes . ">";
+        $class_list = $field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display');
+        if (!empty($class_list) && is_array($class_list)) {
+          $classes = '';
+          foreach ($class_list as $item) {
+            $classes .= ' block_content.' . $item;
+          }
+
+          $classes = "'" . $classes . " field-visibility-identifier'";
+          $element['#prefix'] = "<div class=" . $classes . ">";
           $element['#suffix'] = "</div>";
         }
       }
