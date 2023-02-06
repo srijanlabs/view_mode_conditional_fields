@@ -54,7 +54,7 @@ function view_mode_conditional_fields_form_field_config_edit_form_alter(&$form, 
 }
 
 /**
- * Attaching settings to control visib ility of fields on display.
+ * Attaching settings to control visibility of fields on display.
  *
  * @param array $element
  *   The elements of the form.
