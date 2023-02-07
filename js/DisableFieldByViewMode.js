@@ -27,21 +27,19 @@
      *   The context which to find elements in.
      */
     createInstances: function (context) {
-
-      let viewDisplayModeId = ($("select[id*='view-mode']").length != 0) ? $("select[id*='view-mode']") : '#edit-view-mode-selection';
+      let viewDisplayModeId = ($("select[id*='view-mode']") && $("select[id*='view-mode']").length != 0) ? "select[id*='view-mode']" : '#edit-view-mode-selection';
       let viewDisplayMode = extractViewMode($(viewDisplayModeId).find(":selected").val());
       viewDisplayMode = (viewDisplayMode == '_none') ? 'default' : viewDisplayMode;
       getViewModeVisibility(viewDisplayMode);
-
-      $(viewDisplayModeId , "select[name^='settings']").on('change', function () {
+      $(`${viewDisplayModeId} , select[name^ = 'settings']`).on('change', function () {
         let viewMode = extractViewMode(this.value);
-        ViewMode = (viewMode == '_none') ? 'default' : viewMode;
-        getViewModeVisibility(ViewMode);
-
+        viewMode = (viewMode == '_none') ? 'default' : viewMode;
+        getViewModeVisibility(viewMode);
       });
-      function getViewModeVisibility(ViewMode) {
-        $(".field-visibility-identifier").once().each(function () {
-          if ($(this).hasClass( viewMode ) != TRUE) {
+
+      function getViewModeVisibility(viewMode) {
+        $(".field-visibility-identifier").each(function () {
+          if (($(this).hasClass(viewMode)) != TRUE) {
             $(this).hide();
           }
           else {
@@ -49,8 +47,11 @@
           }
         });
       }
+
       function extractViewMode(viewDisplayMode) {
+        if(viewDisplayMode !== undefined){
         return viewDisplayMode.split(".").pop();
+        }
       }
 
     },
