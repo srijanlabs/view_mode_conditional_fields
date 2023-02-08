@@ -31,7 +31,7 @@
       let viewDisplayMode = extractViewMode($(viewDisplayModeId).find(":selected").val());
       viewDisplayMode = (viewDisplayMode == '_none') ? 'default' : viewDisplayMode;
       getViewModeVisibility(viewDisplayMode);
-      $(`${viewDisplayModeId} , select[name^ = 'settings']`).on('change', function () {
+      $(`${viewDisplayModeId} , select[name^='settings']`).on('change', function () {
         let viewMode = extractViewMode(this.value);
         viewMode = (viewMode == '_none') ? 'default' : viewMode;
         getViewModeVisibility(viewMode);
@@ -39,7 +39,7 @@
 
       function getViewModeVisibility(viewMode) {
         $(".field-visibility-identifier").each(function () {
-          if (($(this).hasClass(viewMode)) != TRUE) {
+          if (($(this).hasClass(viewMode)) != true) {
             $(this).hide();
           }
           else {
