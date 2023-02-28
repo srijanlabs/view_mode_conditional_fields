@@ -8,8 +8,6 @@
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\field\Entity\FieldConfig;
-use Drupal\block_content\Entity\BlockContent;
-use Drupal\block_content\BlockContentForm;
 
 /**
  * Implements hook_help().
@@ -20,7 +18,7 @@ function view_mode_conditional_fields_help($route_name, RouteMatchInterface $rou
     case 'help.page.view_mode_conditional_fields':
       $output = '';
       $output .= '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('View Mode Conditional module provide settings to administrator to control fields visibility for block entity.') . '</p>';
+      $output .= '<p>' . t('View Mode Conditional module provide settings to administrator to control fields visibility.') . '</p>';
       return $output;
 
     default:
@@ -30,18 +28,17 @@ function view_mode_conditional_fields_help($route_name, RouteMatchInterface $rou
 /**
  * Implements hook_form_BASE_FORM_ID_alter().
  *
- * Attach the settings block entity manage field, to control the visibility.
+ * Attach the settings for option to select view modes for  controlling field visibility.
  */
 function view_mode_conditional_fields_form_field_config_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
-  if (isset($form['#entity']) && $form['#entity'] instanceof BlockContent) {
-    $view_modes = \Drupal::entityQuery('entity_view_mode')
-      ->condition('targetEntityType', 'block_content')
-      ->execute();
-    $view_modes['block_content.default'] = 'block_content.default';
+  if (isset($form['#entity'])) {
+    $entity = $form['#entity'];
+    $allViewModes = \Drupal::service('entity_display.repository')
+      ->getViewModeOptionsByBundle($entity->getEntityTypeId(), $entity->bundle());
+    $allViewModes['default'] = 'default';
     $options = [];
-    foreach ($view_modes as $view_mode) {
-      $expStr = explode(".", $view_mode);
-      $options[$expStr[1]] = $expStr[1];
+    foreach ($allViewModes as $key => $value) {
+      $options[$key] = $value;
     }
 
     $field = $form_state->getFormObject()->getEntity();
@@ -72,26 +69,26 @@ function view_mode_conditional_fields_field_widget_form_alter(array &$element, F
     'layout_builder_add_block',
     'layout_builder_update_block',
   ];
-  if ($form_state->getFormObject() instanceof BlockContentForm || in_array($form_state->getFormObject()->getFormId(), $applicable_forms)) {
+
+  if (!empty($form_state->getFormObject()) || in_array($form_state->getFormObject()->getFormId(), $applicable_forms)) {
     $field_definition = $context['items']->getFieldDefinition();
-    if ($field_definition instanceof FieldConfig) {
-      if ($field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display')) {
-        if (\Drupal::request()->query->get('element_parents')) {
-          return TRUE;
-        }
-
-        $class_list = $field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display');
-        if (!empty($class_list) && is_array($class_list)) {
-          $classes = '';
-          foreach ($class_list as $item) {
-            $classes .= ' block_content.' . $item;
-          }
-
-          $classes = "'" . $classes . " field-visibility-identifier'";
-          $element['#prefix'] = "<div class=" . $classes . ">";
-          $element['#suffix'] = "</div>";
-        }
+    if ($field_definition instanceof FieldConfig && $field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display')) {
+      if (\Drupal::request()->query->get('element_parents')) {
+        return TRUE;
       }
+      $class_list = $field_definition->getThirdPartySetting('view_mode_conditional_fields', 'field_visibility_display');
+      if (!empty($class_list) && is_array($class_list)) {
+        $classes = '';
+        foreach ($class_list as $item) {
+          if (!empty($item)) {
+            $classes .= ' ' . $item;
+          }
+        }
+        $classes = "'" . $classes . " field-visibility-identifier'";
+        $element['#prefix'] = "<div class=" . $classes . ">";
+        $element['#suffix'] = "</div>";
+      }
+
     }
   }
 }
@@ -104,7 +101,7 @@ function view_mode_conditional_fields_form_alter(&$form, FormStateInterface $for
     'layout_builder_add_block',
     'layout_builder_update_block',
   ];
-  if ($form_state->getFormObject() instanceof BlockContentForm || in_array($form_id, $applicable_forms)) {
+  if (!empty($form_state->getFormObject()) || in_array($form_id, $applicable_forms)) {
     $form['#attached']['library'][] = 'view_mode_conditional_fields/view_mode_conditional_fields.integration';
   }
 }
@@ -119,9 +116,7 @@ function view_mode_conditional_fields_form_alter(&$form, FormStateInterface $for
  */
 function config_edit_form_validation(array &$form, FormStateInterface $form_state) {
   $field = $form_state->getFormObject()->getEntity();
-  if (($field->get('required') == 1)) {
-    if (!empty($field->get('third_party_settings')['view_mode_conditional_fields']['field_visibility_display'])) {
-      $form_state->setErrorByName('third_party_settings', t('Required and View Mode Conditional Fields Settings both cant work together.'));
-    }
+  if ($field->get('required') == 1 && !empty($field->get('third_party_settings')['view_mode_conditional_fields']['field_visibility_display'])) {
+    $form_state->setErrorByName('third_party_settings', t('Required and View Mode Conditional Fields Settings both cant work together.'));
   }
 }
